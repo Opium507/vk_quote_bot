@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+logs/
+output/
+app/data/allowed_users.json
+app/assets/emoji/*.png
+.DS_Store
+.vscode/
+.idea/
+project_code.txt

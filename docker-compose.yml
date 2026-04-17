@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  vk-quote-bot:
+    build: .
+    container_name: vk-quote-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./output:/app/output
+      - ./app/data:/app/app/data
+      - ./app/assets/emoji:/app/app/assets/emoji 
