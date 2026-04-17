@@ -22,8 +22,10 @@ import traceback
 def safe_send_rendered_photo(
     vk_client: VkBotClient,
     peer_id: int,
+    user_id: int,                 # <-- добавляем
     render_func,
     request,
+    user_manager: UserManager,    # <-- добавляем
 ) -> None:
     try:
         image_path = render_func(request)
@@ -31,6 +33,9 @@ def safe_send_rendered_photo(
             peer_id=peer_id,
             image_path=image_path,
         )
+        # Увеличиваем счётчик только после успешной отправки
+        user_manager.increment_render_count(user_id)
+
     except Exception:
         traceback.print_exc()
         logger.error("Ошибка при рендеринге или отправке фото", exc_info=True)
@@ -145,18 +150,35 @@ def handle_message_new(
             return
 
         # !ц список
-        if text == "!ц список":
-            users = user_manager.list_users()
-            if not users:
-                vk_client.send_text(peer_id=peer_id, message="Список пользователей пуст.")
-                return
+    if text == "!ц список":
+        users = user_manager.list_users()
+        total_renders = user_manager.get_total_renders()
+        superadmin_count = user_manager.get_superadmin_render_count()
 
-            lines = ["📋 Добавлены к цитированию:"]
-            for u in users:
-                lines.append(f"  ■ [vk.com/id{u['id']}|{u['name']}]")
-            vk_client.send_text(peer_id=peer_id, message="\n".join(lines))
-            return
+        # Получаем имя суперадмина через VK API
+        try:
+            superadmin_info = vk_client.api.users.get(
+                user_ids=user_manager.superadmin_id,
+                fields="first_name,last_name"
+            )
+            if superadmin_info:
+                first = superadmin_info[0].get('first_name', '')
+                last = superadmin_info[0].get('last_name', '')
+                superadmin_name = f"{first} {last}".strip()
+            else:
+                superadmin_name = f"Суперадмин (id{user_manager.superadmin_id})"
+        except Exception:
+            superadmin_name = f"Суперадмин (id{user_manager.superadmin_id})"
 
+        lines = ["📋 Добавлены к цитированию:"]
+        for u in users:
+            lines.append(f"  ■ {u['name']} {u.get('render_count', 0)}")
+
+        lines.append(f"\n👑 Суперадмин:\n  ■ {superadmin_name} {superadmin_count}")
+        lines.append(f"\n📊 Всего рендеров: {total_renders}")
+        vk_client.send_text(peer_id=peer_id, message="\n".join(lines))
+        return
+                
     # --- Проверка доступа для всех остальных команд ---
     if not user_manager.is_allowed(from_id):
         vk_client.send_text(peer_id=peer_id, message="У вас нет доступа к боту. Обратитесь к администратору.")
@@ -202,8 +224,10 @@ def handle_message_new(
         safe_send_rendered_photo(
             vk_client=vk_client,
             peer_id=peer_id,
+            user_id=from_id,
             render_func=render_single_quote,
             request=request,
+            user_manager=user_manager,
         )
         return
 
@@ -230,8 +254,10 @@ def handle_message_new(
         safe_send_rendered_photo(
             vk_client=vk_client,
             peer_id=peer_id,
-            render_func=render_thread_quote,
+            user_id=from_id,
+            render_func=render_single_quote,
             request=request,
+            user_manager=user_manager,
         )
         return
 
