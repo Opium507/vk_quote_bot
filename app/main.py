@@ -172,9 +172,9 @@ def handle_message_new(
 
         lines = ["📋 Добавлены к цитированию:"]
         for u in users:
-            lines.append(f"  ■ {u['name']} {u.get('render_count', 0)}")
+            lines.append(f"  ■ [vk.ru/id{u['id']}|{u['name']}] {u.get('render_count', 0)}")
 
-        lines.append(f"\n👑 Суперадмин:\n  ■ {superadmin_name} {superadmin_count}")
+        lines.append(f"\n👑 Суперадмин:\n  ■ [vk.ru/id{user_manager.superadmin_id}|{superadmin_name}] {superadmin_count}")
         lines.append(f"\n📊 Всего рендеров: {total_renders}")
         vk_client.send_text(peer_id=peer_id, message="\n".join(lines))
         return
