@@ -89,6 +89,7 @@ def handle_message_new(
     text = (message.get("text") or "").strip().lower()
     peer_id = message["peer_id"]
     from_id = message["from_id"]
+    # logger.info(f"Получено сообщение от {from_id}: {text}")
 
     if not is_private_peer(peer_id):
         return
@@ -172,9 +173,9 @@ def handle_message_new(
 
         lines = ["📋 Добавлены к цитированию:"]
         for u in users:
-            lines.append(f"  ■ [vk.ru/id{u['id']}|{u['name']}] {u.get('render_count', 0)}")
+            lines.append(f"  ■ [id{u['id']}|{u['name']}] {u.get('render_count', 0)}")
 
-        lines.append(f"\n👑 Суперадмин:\n  ■ [vk.ru/id{user_manager.superadmin_id}|{superadmin_name}] {superadmin_count}")
+        lines.append(f"\n👑 Суперадмин:\n  ■ [id{user_manager.superadmin_id}|{superadmin_name}] {superadmin_count}")
         lines.append(f"\n📊 Всего рендеров: {total_renders}")
         vk_client.send_text(peer_id=peer_id, message="\n".join(lines))
         return
@@ -255,7 +256,7 @@ def handle_message_new(
             vk_client=vk_client,
             peer_id=peer_id,
             user_id=from_id,
-            render_func=render_single_quote,
+            render_func=render_thread_quote,
             request=request,
             user_manager=user_manager,
         )

@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from threading import Lock
+from threading import RLock
 from typing import List, Dict, Optional
 
 BASE_DIR = Path(__file__).parent.parent
@@ -9,7 +9,7 @@ ALLOWED_USERS_FILE = BASE_DIR / "data" / "allowed_users.json"
 class UserManager:
     def __init__(self, superadmin_id: int):
         self.superadmin_id = superadmin_id
-        self._lock = Lock()
+        self._lock = RLock()
         self._users: List[Dict] = []          # каждый элемент: {"id": int, "name": str, "render_count": int}
         self._superadmin_render_count: int = 0
         self._total_renders: int = 0
@@ -28,15 +28,15 @@ class UserManager:
             self._total_renders = 0
 
     def _save(self):
-        with self._lock:
-            ALLOWED_USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
-            with open(ALLOWED_USERS_FILE, "w", encoding="utf-8") as f:
-                json.dump({
-                    "users": self._users,
-                    "superadmin_render_count": self._superadmin_render_count,
-                    "total_renders": self._total_renders
-                }, f, ensure_ascii=False, indent=2)
-
+        # Убираем with self._lock, так как вызывается только из методов, которые уже захватили lock
+        ALLOWED_USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(ALLOWED_USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump({
+                "users": self._users,
+                "superadmin_render_count": self._superadmin_render_count,
+                "total_renders": self._total_renders
+            }, f, ensure_ascii=False, indent=2)
+            
     def is_allowed(self, user_id: int) -> bool:
         if user_id == self.superadmin_id:
             return True
@@ -67,6 +67,7 @@ class UserManager:
         return None
 
     def increment_render_count(self, user_id: int) -> None:
+        # print(f"DEBUG: increment_render_count called for user {user_id}")  # временно
         """Увеличивает счётчик рендеров для пользователя или суперадмина."""
         with self._lock:
             if user_id == self.superadmin_id:
